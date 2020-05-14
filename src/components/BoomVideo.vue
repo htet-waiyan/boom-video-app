@@ -1,5 +1,6 @@
 <template>
     <div>
+        <span class="text-dark">v2.2</span>
         <div class="video_chat_window" v-if="hasRegistered">
             <div class="row mb-2 mt-2">
               <div class="col text-right">
@@ -10,6 +11,8 @@
               </div>
             </div>
             <!-- local track here -->
+            <div class="remote-audio-tracks">
+            </div>
             <div class="row">
               <div class="col-3">
                 <div class="card local-video-window" id="localTrack" style="width: 18rem;">
@@ -71,22 +74,26 @@ export default {
   },
   methods: {
     // attach video/audo tracks to the DOM
-    attachTracks(tracks, container) {
+    attachTracks(tracks, container, audioContainer) {
       tracks.forEach((track) => {
-        const remoteVideo = track.attach();
-        const colDiv = $('<div class="col mb-2"></div>');
-        const videoCard = $(`
-          <div class="card remote-video-window">
-          </div>`);
-        videoCard.append(remoteVideo);
-        colDiv.append(videoCard);
-        container.append(colDiv);
-        remoteVideo.style.transform = 'scale(-1, 1)';
+        if (track.kind === 'video') {
+          const remoteVideo = track.attach();
+          const colDiv = $('<div class="col mb-2"></div>');
+          const videoCard = $(`
+            <div class="card remote-video-window">
+            </div>`);
+          videoCard.append(remoteVideo);
+          colDiv.append(videoCard);
+          container.append(colDiv);
+          remoteVideo.style.transform = 'scale(-1, 1)';
+        } else {
+          audioContainer.append(track.attach());
+        }
       });
     },
-    attachParticpantTracks(participant, container) {
+    attachParticpantTracks(participant, container, audioContainer) {
       const tracks = Array.from(participant.tracks.values());
-      this.attachTracks(tracks, container);
+      this.attachTracks(tracks, container, audioContainer);
     },
     detachTracks(tracks) {
       tracks.forEach((track) => {
@@ -117,6 +124,7 @@ export default {
           const connectOptions = {
             name: this.roomName,
             audio: true,
+            video: true,
           };
           return connectOptions;
         })
@@ -130,12 +138,14 @@ export default {
               // document.getElementById('remoteTrack').innerHTML = '';
               room.participants.forEach((participant) => {
                 const previewContainer = $('#remoteTrack');
-                this.attachParticpantTracks(participant, previewContainer);
+                const previewAudio = $('#remote-audio-tracks');
+                this.attachParticpantTracks(participant, previewContainer, previewAudio);
               });
               room.on('trackAdded', (track, participant) => {
                 console.log(`${participant.identity} added track: ${track.kind}`);
                 const previewContainer = $('#remoteTrack');
-                this.attachTracks([track], previewContainer);
+                const previewAudio = $('#remote-audio-tracks');
+                this.attachTracks([track], previewContainer, previewAudio);
               });
               room.on('trackRemoved', (track) => {
                 this.detachTracks([track]);
@@ -188,7 +198,7 @@ export default {
 
 <style>
   .hidden-version {
-    color: #fff;
+    color: #485058!important;
   }
   .meeting-registration {
     position: absolute !important;
